@@ -32,6 +32,8 @@ export interface NoteCapSettings {
   spellcheckEnabled: boolean;
   /** Indent prepended to a sub-bullet line in the output. */
   subBulletIndent: string;
+  /** Text prepended before the page number in the reference. e.g. "Smith, " → (Smith, 42). */
+  pagePrefix: string;
 
   // ---- Reserved for v1.1+ (optional on-demand Claude API grammar/fact-check) ----
   llmEnabled: boolean;
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: NoteCapSettings = {
   pageTemplate: "(${page})",
   spellcheckEnabled: true,
   subBulletIndent: "\t",
+  pagePrefix: "",
   llmEnabled: false,
   llmApiKey: "",
   llmModel: "claude-haiku-4-5-20251001",
@@ -213,6 +216,23 @@ export class NoteCapSettingTab extends PluginSettingTab {
           )
           .onChange(async (v) => {
             this.plugin.settings.subBulletIndent = v === "tab" ? "\t" : v;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Page prefix")
+      .setDesc(
+        'Text inserted before the page number in the reference. ' +
+          'Example: "Smith, " → (Smith, 123). Leave blank for none. ' +
+          'Also prompted each time capture is turned on.'
+      )
+      .addText((t) =>
+        t
+          .setValue(this.plugin.settings.pagePrefix)
+          .setPlaceholder("e.g. Smith, ")
+          .onChange(async (v) => {
+            this.plugin.settings.pagePrefix = v;
             await this.plugin.saveSettings();
           })
       );

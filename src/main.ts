@@ -1,4 +1,4 @@
-import { MarkdownView, Notice, Plugin, normalizePath } from "obsidian";
+import { MarkdownView, Modal, Notice, Plugin, Setting, normalizePath } from "obsidian";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 
@@ -7,6 +7,78 @@ import { parseLine } from "./parser";
 import { buildBullet } from "./formatter";
 import { isNested } from "./nesting";
 import { SpellChecker } from "./spellcheck";
+
+/** Modal prompting for the page prefix each time capture is turned on. */
+class PrefixModal extends Modal {
+  private value: string;
+  private readonly onSubmit: (prefix: string) => void;
+  private readonly onCancel: () => void;
+
+  constructor(
+    app: import("obsidian").App,
+    currentPrefix: string,
+    onSubmit: (prefix: string) => void,
+    onCancel: () => void
+  ) {
+    super(app);
+    this.value = currentPrefix;
+    this.onSubmit = onSubmit;
+    this.onCancel = onCancel;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h3", { text: "Note Capture — Page prefix" });
+    contentEl.createEl("p", {
+      text: 'Text inserted before the page number. Example: "Smith, " → (Smith, 123). Leave blank for none.',
+      cls: "setting-item-description",
+    });
+
+    let inputEl: HTMLInputElement | undefined;
+
+    new Setting(contentEl).setName("Prefix").addText((t) => {
+      t.setValue(this.value).setPlaceholder("e.g. Smith, ").onChange((v) => {
+        this.value = v;
+      });
+      inputEl = t.inputEl;
+      inputEl.style.width = "100%";
+    });
+
+    new Setting(contentEl)
+      .addButton((b) =>
+        b
+          .setButtonText("OK")
+          .setCta()
+          .onClick(() => {
+            this.close();
+            this.onSubmit(this.value);
+          })
+      )
+      .addButton((b) =>
+        b.setButtonText("Cancel").onClick(() => {
+          this.close();
+          this.onCancel();
+        })
+      );
+
+    // Focus input; wire Enter key to confirm.
+    setTimeout(() => {
+      if (!inputEl) return;
+      inputEl.focus();
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.close();
+          this.onSubmit(this.value);
+        }
+      });
+    }, 50);
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
 
 /** True if the raw line is already a formatted Markdown bullet (- text or \t- text). */
 function isAlreadyBullet(raw: string): boolean {
@@ -106,11 +178,31 @@ export default class NoteCapPlugin extends Plugin {
   }
 
   private toggleCapture() {
-    this.settings.captureEnabled = !this.settings.captureEnabled;
-    this.saveSettings();
-    this.updateRibbonIcon();
-    this.restartInterval();
-    new Notice(`Note Capture ${this.settings.captureEnabled ? "enabled" : "disabled"}`);
+    if (this.settings.captureEnabled) {
+      // Turning OFF.
+      this.settings.captureEnabled = false;
+      this.saveSettings();
+      this.updateRibbonIcon();
+      this.stopInterval();
+      new Notice("Note Capture disabled");
+    } else {
+      // Turning ON: ask for prefix first.
+      new PrefixModal(
+        this.app,
+        this.settings.pagePrefix,
+        async (prefix) => {
+          this.settings.pagePrefix = prefix;
+          this.settings.captureEnabled = true;
+          await this.saveSettings();
+          this.updateRibbonIcon();
+          this.restartInterval();
+          new Notice("Note Capture enabled");
+        },
+        () => {
+          // User cancelled — leave capture off.
+        }
+      ).open();
+    }
   }
 
   /**
@@ -208,7 +300,8 @@ export default class NoteCapPlugin extends Plugin {
       page,
       this.settings.pageTemplate,
       nested,
-      this.settings.subBulletIndent
+      this.settings.subBulletIndent,
+      this.settings.pagePrefix
     );
 
     editor.replaceRange(
