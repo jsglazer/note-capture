@@ -1,5 +1,9 @@
 # Note Capture
 
+[![GitHub release](https://img.shields.io/github/v/release/jsglazer/note-capture?logo=github)](https://github.com/jsglazer/note-capture/releases)
+[![GitHub license](https://img.shields.io/github/license/jsglazer/note-capture)](https://github.com/jsglazer/note-capture/blob/main/LICENSE)
+[![Made with Claude](https://img.shields.io/badge/Made_with-Claude-D97756?logo=anthropic)](https://claude.ai)
+
 Rapidly capture typed reading notes in Obsidian. Type a **page number**, a **delimiter**,
 and your **note**, then press **Enter** — Note Capture formats it into a Markdown bullet with
 the page appended.
