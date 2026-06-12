@@ -1,0 +1,10 @@
+{
+  "id": "notecap",
+  "name": "NoteCap",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Rapidly capture typed reading notes: type a page number, a delimiter, and text, then hit Enter to auto-format into a bulleted list with the page appended.",
+  "author": "jsglazer",
+  "authorUrl": "https://github.com/jsglazer",
+  "isDesktopOnly": false
+}
