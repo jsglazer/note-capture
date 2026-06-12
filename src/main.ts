@@ -20,8 +20,11 @@ export default class NoteCapPlugin extends Plugin {
   private lastPage: string | null = null;
   private ribbonIconEl: HTMLElement | null = null;
   private intervalHandle: number | null = null;
-  /** Last raw line text processed (or skipped) in interval mode. */
-  private lastIntervalLine = "\x00"; // sentinel so first real line is always checked
+
+  // Interval-mode: track cursor + line across ticks to detect "user paused".
+  private prevTickLine = -1;
+  private prevTickCh = -1;
+  private prevTickRaw = "\x00";
 
   async onload() {
     await this.loadSettings();
@@ -64,7 +67,7 @@ export default class NoteCapPlugin extends Plugin {
   }
 
   onunload() {
-    this.clearInterval();
+    this.stopInterval();
   }
 
   // ---- Public helpers called from settings tab --------------------------------
@@ -77,16 +80,30 @@ export default class NoteCapPlugin extends Plugin {
   }
 
   restartInterval() {
-    this.clearInterval();
+    this.stopInterval();
     if (this.settings.activationMode === "interval" && this.settings.captureEnabled) {
-      this.intervalHandle = window.setInterval(
-        () => this.intervalTick(),
-        this.settings.intervalMs
+      // Use this.registerInterval so Obsidian tracks it for cleanup on unload.
+      this.intervalHandle = this.registerInterval(
+        window.setInterval(() => this.intervalTick(), this.settings.intervalMs)
       );
+      this.resetIntervalTracking();
     }
   }
 
   // ---- Private ---------------------------------------------------------------
+
+  private stopInterval() {
+    if (this.intervalHandle !== null) {
+      window.clearInterval(this.intervalHandle);
+      this.intervalHandle = null;
+    }
+  }
+
+  private resetIntervalTracking() {
+    this.prevTickLine = -1;
+    this.prevTickCh = -1;
+    this.prevTickRaw = "\x00";
+  }
 
   private toggleCapture() {
     this.settings.captureEnabled = !this.settings.captureEnabled;
@@ -96,34 +113,42 @@ export default class NoteCapPlugin extends Plugin {
     new Notice(`Note Capture ${this.settings.captureEnabled ? "enabled" : "disabled"}`);
   }
 
-  private clearInterval() {
-    if (this.intervalHandle !== null) {
-      window.clearInterval(this.intervalHandle);
-      this.intervalHandle = null;
-    }
-  }
-
   /**
-   * Interval mode: process the line ABOVE the cursor (the one the user just
-   * committed by pressing Enter). Only fires if that line changed since the last
-   * tick AND it is not already a formatted bullet.
+   * Interval mode: transform the CURRENT line after the user pauses typing.
+   *
+   * On each tick, compare the cursor position and line content against the previous
+   * tick. If both are unchanged, the user has been idle for at least one full interval
+   * period — commit the line. This means: type your note, stop typing, and the plugin
+   * formats it automatically without pressing Enter.
    */
   private intervalTick() {
     if (!this.settings.captureEnabled) return;
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) return;
+
     const editor = view.editor;
     const cursor = editor.getCursor();
-    if (cursor.line === 0) return;
+    const raw = editor.getLine(cursor.line);
 
-    const prevLineNo = cursor.line - 1;
-    const raw = editor.getLine(prevLineNo);
+    const cursorStable =
+      cursor.line === this.prevTickLine && cursor.ch === this.prevTickCh;
+    const lineStable = raw === this.prevTickRaw;
 
-    // Skip if unchanged since last tick (already processed, or user hasn't moved on).
-    if (raw === this.lastIntervalLine) return;
-    this.lastIntervalLine = raw;
+    // Update tracking BEFORE potentially transforming (transform moves cursor).
+    this.prevTickLine = cursor.line;
+    this.prevTickCh = cursor.ch;
+    this.prevTickRaw = raw;
 
-    this.transformLine(editor, prevLineNo, raw);
+    // Only act when cursor AND line are both unchanged since the last tick.
+    if (!cursorStable || !lineStable) return;
+
+    // Skip empty lines and already-formatted bullets.
+    if (raw.trim().length === 0) return;
+
+    if (this.transformLine(editor, cursor.line, raw)) {
+      // Reset tracking after a successful transform so the new empty line is fresh.
+      this.resetIntervalTracking();
+    }
   }
 
   /** Called on Enter in keypress mode. Returns true to consume the event. */
@@ -145,7 +170,7 @@ export default class NoteCapPlugin extends Plugin {
     lineNo: number,
     raw: string
   ): boolean {
-    // Safety guard: never re-process an already-formatted bullet.
+    // Never re-process an already-formatted bullet.
     if (isAlreadyBullet(raw)) return false;
 
     const parsed = parseLine(raw, this.settings.delimiter, this.settings.delimiterMode);
@@ -193,8 +218,6 @@ export default class NoteCapPlugin extends Plugin {
     );
     editor.setCursor({ line: lineNo + 1, ch: 0 });
 
-    // Update interval guard to the new bullet so subsequent ticks skip it.
-    this.lastIntervalLine = bullet;
     this.lastPage = page;
 
     if (flags.length > 0) {
