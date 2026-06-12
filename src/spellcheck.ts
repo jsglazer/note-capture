@@ -43,7 +43,7 @@ export class SpellChecker {
         return true;
       }
     } catch (e) {
-      console.warn("NoteCap: failed to load Hunspell dictionary, using fallback map.", e);
+      console.warn("Note Capture: failed to load Hunspell dictionary, using fallback map.", e);
     }
     return false;
   }

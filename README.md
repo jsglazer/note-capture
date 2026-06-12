@@ -1,8 +1,8 @@
-# NoteCap
+# Note Capture
 
 Rapidly capture typed reading notes in Obsidian. Type a **page number**, a **delimiter**,
-and your **note**, then press **Enter** — NoteCap formats it into a Markdown bullet with the
-page appended.
+and your **note**, then press **Enter** — Note Capture formats it into a Markdown bullet with
+the page appended.
 
 Works on **macOS and iOS** (single plugin, `isDesktopOnly: false`).
 
@@ -47,7 +47,7 @@ Press Enter and it becomes:
 
 Out of the box, spell check uses a built-in common-misspellings list. To enable full
 Hunspell spell checking, drop `en_US.aff` and `en_US.dic` into the plugin folder
-(`<vault>/.obsidian/plugins/notecap/`). NoteCap loads them automatically via `nspell`.
+(`<vault>/.obsidian/plugins/note-capture/`). NoteCap loads them automatically via `nspell`.
 
 ## Roadmap
 
@@ -61,4 +61,4 @@ npm run build   # produces main.js
 ```
 
 Copy `main.js`, `manifest.json` (and any dictionary files) into a test vault's
-`.obsidian/plugins/notecap/` and enable the plugin.
+`.obsidian/plugins/note-capture/` and enable the plugin.

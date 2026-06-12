@@ -31,7 +31,7 @@ export default class NoteCapPlugin extends Plugin {
         }
         return null;
       });
-      if (loaded) console.log("NoteCap: loaded en_US Hunspell dictionary.");
+      if (loaded) console.log("Note Capture: loaded en_US Hunspell dictionary.");
     }
 
     // Intercept Enter at highest precedence; we only handle NoteCap-shaped lines and
@@ -107,7 +107,7 @@ export default class NoteCapPlugin extends Plugin {
       const list = flags
         .map((f) => (f.suggestion ? `${f.word} → ${f.suggestion}` : `${f.word} (?)`))
         .join(", ");
-      new Notice(`NoteCap — possible misspellings: ${list}`);
+      new Notice(`Note Capture — possible misspellings: ${list}`);
     }
 
     return true;

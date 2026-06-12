@@ -50,10 +50,10 @@ export class NoteCapSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "NoteCap" });
+    containerEl.createEl("h2", { text: "Note Capture" });
     containerEl.createEl("p", {
       text: "Type a page number, a delimiter, then your note, and press Enter. " +
-        'NoteCap turns it into "- your note (page)".',
+        'Note Capture turns it into "- your note (page)".',
       cls: "setting-item-description",
     });
 

@@ -1,8 +1,9 @@
-# NoteCap — Project Log
+# Note Capture — Project Log
 
-Version: 1.0.0
+Version: 1.0.1
 Created: 2026-06-12
-Repository: https://github.com/jsglazer/NoteCap
+Repository: https://github.com/jsglazer/note-capture
+Formerly: NoteCap (renamed 2026-06-12)
 
 No `UpdateXX.md` file existed for this project, so per the Dev workflow rules all activity is
 logged here.
@@ -52,5 +53,34 @@ Conducted via plan mode. Full notes saved to `/Users/josh/VaultDEV/NoteCap.md`.
 | 4 | Distinguishing sub-bullets from top-level lines | Timing-window heuristic (`nesting.ts`), configurable `subBulletWindowMs` |
 | 5 | Avoid hijacking Enter on ordinary prose | `parseLine` returns null unless the line is `<number\|empty> + delimiter`; handler passes Enter through otherwise |
 | 6 | Project scaffolded at wrong path | Background agent moved it to `Dev/Obsidian/NoteCap`; paths consolidated |
+
+Closed: 2026-06-12
+
+---
+
+## 2026-06-12 — v1.0.1: rename NoteCap → note-capture
+
+### User prompt
+> Project Updates — Project renamed to note-capture
+> `/Users/josh/Dev/Obsidian/note-capture`, Dev file `note-capture Dev.md`,
+> repo `https://github.com/jsglazer/note-capture`, changed to public
+
+### Changes
+- Local dir, vault Dev file, and GitHub repo were already renamed externally (repo now **public**).
+- Reconciled project internals to the new name:
+  - `manifest.json`: id `notecap` → `note-capture`, name `NoteCap` → `Note Capture`.
+  - `package.json` name → `note-capture`; version bumped to **1.0.1** (manifest + versions.json too).
+  - Git remote re-pointed to `note-capture.git`.
+  - Log file `NoteCap-log.md` → `note-capture-log.md`; README title + plugin-folder paths updated.
+  - User-facing strings (settings header, Notice, console logs, dictionary-path comment) → "Note Capture".
+  - Internal TS symbol names (`NoteCapPlugin`, etc.) left as-is (non-user-facing, avoids churn).
+- Rebuilt (`main.js` now reports id `note-capture`); smoke test 11/11 still pass.
+
+### Issue / Fix summary
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Project renamed to note-capture | Updated manifest id/name, package name, README, log filename, remote URL, user-facing strings |
+| 2 | Git remote still pointed at old NoteCap repo | `git remote set-url origin .../note-capture.git` |
+| 3 | Config change requires version bump | Bumped 1.0.0 → 1.0.1 across manifest/package/versions.json/Dev file |
 
 Closed: 2026-06-12

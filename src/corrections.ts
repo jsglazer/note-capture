@@ -3,7 +3,7 @@
  * Keys are lowercase misspellings; values are the corrected lowercase form.
  *
  * To enable full spell checking, drop `en_US.aff` and `en_US.dic` into the plugin folder
- * (`<vault>/.obsidian/plugins/notecap/`); NoteCap will load them via nspell automatically
+ * (`<vault>/.obsidian/plugins/note-capture/`); Note Capture will load them via nspell automatically
  * and this map becomes a supplement.
  */
 export const COMMON_MISSPELLINGS: Record<string, string> = {
