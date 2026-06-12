@@ -1,76 +1,86 @@
+export type DelimiterMode = "required" | "optional" | "none";
+
 export interface ParsedLine {
-  /** Page number as typed, or null when sticky reuse applies. */
+  /** Page number as typed, or null when delimiter-sticky reuse applies. */
   page: string | null;
-  /** The note text (after delimiter, or after the leading page digits). */
+  /** The note text. */
   text: string;
-  /** True when the line had no page number AND no delimiter (bare sticky line). */
-  bareSticky: boolean;
 }
 
 /** Matches Arabic digits or roman numerals (upper or lower case). */
-const PAGE_RE = /^(\d+|[ivxlcdmIVXLCDM]+)\s*/;
+const PAGE_RE = /^(\d+|[ivxlcdmIVXLCDM]+)$/;
+
+/**
+ * Try to parse a line that MUST contain the delimiter.
+ *   "42/note"  -> { page: "42",  text: "note" }
+ *   "xiv/note" -> { page: "xiv", text: "note" }
+ *   "/note"    -> { page: null,  text: "note" }  (delimiter-sticky)
+ */
+function parseWithDelimiter(trimmed: string, delimiter: string): ParsedLine | null {
+  const idx = trimmed.indexOf(delimiter);
+  if (idx === -1) return null;
+
+  const left = trimmed.slice(0, idx).trim();
+  const text = trimmed.slice(idx + delimiter.length).trim();
+  if (text.length === 0) return null;
+
+  if (left.length === 0) return { page: null, text };
+
+  if (PAGE_RE.test(left)) return { page: left, text };
+
+  return null; // left side is not a valid page number
+}
+
+/**
+ * Try to parse a line where the page number is directly adjacent (no delimiter).
+ *   "42Note here"  -> { page: "42",  text: "Note here" }
+ *   "xivNote here" -> { page: "xiv", text: "Note here" }
+ *   "Note here"    -> null  (no leading page number)
+ */
+function parseWithoutDelimiter(trimmed: string): ParsedLine | null {
+  const m = trimmed.match(/^(\d+|[ivxlcdmIVXLCDM]+)([\s\S]+)/);
+  if (!m) return null;
+  const text = m[2].trim();
+  if (text.length === 0) return null;
+  return { page: m[1], text };
+}
 
 /**
  * Parse a raw editor line into a Note Capture entry.
  *
- * Recognised forms (delimiter shown as "|", empty-delimiter as ""):
+ * delimiterMode controls which forms are accepted:
+ *   "required" — line MUST contain the delimiter: "42/note" or "/note" (sticky)
+ *   "none"     — no delimiter: "42note" (page directly adjacent); no sticky possible
+ *   "optional" — both forms work: "42/note", "/note", "42note"
  *
- *   With delimiter:
- *     "42 | text"      -> { page: "42",  text: "text", bareSticky: false }
- *     "xiv | text"     -> { page: "xiv", text: "text", bareSticky: false }
- *     "| text"         -> { page: null,  text: "text", bareSticky: false }  (delimiter-sticky)
- *     "text"           -> { page: null,  text: "text", bareSticky: true  }  (bare-sticky, if stickyPage on)
+ * Returns null when the line is not a Note Capture entry. Callers use this to let
+ * a normal Enter happen instead.
  *
- *   Without delimiter (emptyDelimiter=true):
- *     "325Here is a note" -> { page: "325", text: "Here is a note", bareSticky: false }
- *     "xivHere is a note" -> { page: "xiv", text: "Here is a note", bareSticky: false }
- *     "Here is a note"    -> { page: null,  text: "Here is a note", bareSticky: true  }  (bare-sticky)
- *
- * Returns null when the line cannot be interpreted as a Note Capture entry.
+ * Note: bare text lines with no page number and no delimiter are NEVER matched,
+ * preventing accidental re-formatting of existing prose and bullets.
  */
 export function parseLine(
   raw: string,
   delimiter: string,
-  stickyPage: boolean
+  delimiterMode: DelimiterMode
 ): ParsedLine | null {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return null;
 
-  // ---- No-delimiter mode ---------------------------------------------------
-  if (delimiter === "") {
-    const m = trimmed.match(PAGE_RE);
-    if (m) {
-      const page = m[1];
-      const text = trimmed.slice(m[0].length).trim();
-      if (text.length === 0) return null; // just a page number, nothing to note
-      return { page, text, bareSticky: false };
+  switch (delimiterMode) {
+    case "required":
+      return parseWithDelimiter(trimmed, delimiter);
+
+    case "none":
+      return parseWithoutDelimiter(trimmed);
+
+    case "optional": {
+      // Delimiter path takes priority when the delimiter is present.
+      if (trimmed.includes(delimiter)) {
+        const withDelim = parseWithDelimiter(trimmed, delimiter);
+        if (withDelim !== null) return withDelim;
+      }
+      return parseWithoutDelimiter(trimmed);
     }
-    // No leading page — bare-sticky line (handled by caller based on stickyPage setting).
-    if (!stickyPage) return null;
-    return { page: null, text: trimmed, bareSticky: true };
   }
-
-  // ---- Delimiter mode -------------------------------------------------------
-  const idx = trimmed.indexOf(delimiter);
-  if (idx !== -1) {
-    const left = trimmed.slice(0, idx).trim();
-    const text = trimmed.slice(idx + delimiter.length).trim();
-
-    if (left.length === 0) {
-      // "| text" — delimiter-sticky
-      return { page: null, text, bareSticky: false };
-    }
-
-    const m = left.match(/^(\d+|[ivxlcdmIVXLCDM]+)$/);
-    if (m) {
-      return { page: m[1], text, bareSticky: false };
-    }
-
-    // Left side is neither empty nor a page number — not a Note Capture line.
-    return null;
-  }
-
-  // No delimiter found — bare-sticky (no delimiter, no page).
-  if (!stickyPage) return null;
-  return { page: null, text: trimmed, bareSticky: true };
 }

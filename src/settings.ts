@@ -1,6 +1,8 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type NoteCapPlugin from "./main";
+import type { DelimiterMode } from "./parser";
 
+export type { DelimiterMode };
 export type CorrectionMode = "autocorrect" | "flag";
 export type ActivationMode = "keypress" | "interval";
 
@@ -11,19 +13,24 @@ export interface NoteCapSettings {
   activationMode: ActivationMode;
   /** Polling interval in ms when activationMode === "interval". */
   intervalMs: number;
-  /** When true, parse "325Here is a note" with no delimiter required. */
-  emptyDelimiter: boolean;
-  /** Delimiter that separates the page number from the note text, e.g. "|". */
+  /**
+   * Controls whether a delimiter is required between the page number and note text.
+   *   "required" — "84/note"         (page + delimiter + text)
+   *   "optional" — "84/note" or "84note" (delimiter optional)
+   *   "none"     — "84note"          (no delimiter; page directly adjacent to text)
+   */
+  delimiterMode: DelimiterMode;
+  /** Delimiter separating page from text (ignored when delimiterMode === "none"). */
   delimiter: string;
   /** What to do with misspellings: fix them inline, or just flag them. */
   correctionMode: CorrectionMode;
-  /** Reuse the last page when a new line has no page number and no delimiter. */
+  /** Reuse the last page when a line has only the delimiter (e.g. "/note"). */
   stickyPage: boolean;
   /** Template for the appended page reference; ${page} is substituted. */
   pageTemplate: string;
   /** Run the local spell checker on each committed line. */
   spellcheckEnabled: boolean;
-  /** Indent prepended to a sub-bullet line. */
+  /** Indent prepended to a sub-bullet line in the output. */
   subBulletIndent: string;
 
   // ---- Reserved for v1.1+ (optional on-demand Claude API grammar/fact-check) ----
@@ -36,8 +43,8 @@ export const DEFAULT_SETTINGS: NoteCapSettings = {
   captureEnabled: true,
   activationMode: "keypress",
   intervalMs: 2000,
-  emptyDelimiter: false,
-  delimiter: "|",
+  delimiterMode: "required",
+  delimiter: "/",
   correctionMode: "flag",
   stickyPage: true,
   pageTemplate: "(${page})",
@@ -74,7 +81,10 @@ export class NoteCapSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Enable capture")
-      .setDesc("Turn Note Capture on or off without disabling the plugin. Also toggled via the ribbon icon and the command palette.")
+      .setDesc(
+        "Turn Note Capture on or off without disabling the plugin. " +
+          "Also toggled via the ribbon icon and the command palette."
+      )
       .addToggle((t) =>
         t
           .setValue(this.plugin.settings.captureEnabled)
@@ -89,7 +99,7 @@ export class NoteCapSettingTab extends PluginSettingTab {
       .setName("Activation mode")
       .setDesc(
         '"Keypress" transforms a line when you press Enter. ' +
-          '"Interval" scans the active line on a timer (useful when Enter is consumed by another plugin).'
+          '"Interval" scans the line above the cursor on a timer.'
       )
       .addDropdown((d) =>
         d
@@ -100,14 +110,14 @@ export class NoteCapSettingTab extends PluginSettingTab {
             this.plugin.settings.activationMode = v as ActivationMode;
             await this.plugin.saveSettings();
             this.plugin.restartInterval();
-            this.display(); // re-render to show/hide interval setting
+            this.display();
           })
       );
 
     if (this.plugin.settings.activationMode === "interval") {
       new Setting(containerEl)
         .setName("Interval (ms)")
-        .setDesc("How often to scan the current line when using interval mode.")
+        .setDesc("How often to scan when using interval mode. Minimum 200 ms.")
         .addText((t) =>
           t
             .setValue(String(this.plugin.settings.intervalMs))
@@ -126,30 +136,37 @@ export class NoteCapSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "Input" });
 
     new Setting(containerEl)
-      .setName("No-delimiter mode")
+      .setName("Delimiter mode")
       .setDesc(
-        'Parse the page number directly adjacent to the text, e.g. "325Here is a note" → "- Here is a note (325)". ' +
-          "When on, the Delimiter setting is ignored."
+        '"Required": delimiter must be present (84/note). ' +
+          '"Optional": both 84/note and 84note work. ' +
+          '"None": no delimiter — page directly adjacent to text (84note only).'
       )
-      .addToggle((t) =>
-        t
-          .setValue(this.plugin.settings.emptyDelimiter)
+      .addDropdown((d) =>
+        d
+          .addOption("required", "Required (84/note)")
+          .addOption("optional", "Optional (84/note or 84note)")
+          .addOption("none", "None (84note only)")
+          .setValue(this.plugin.settings.delimiterMode)
           .onChange(async (v) => {
-            this.plugin.settings.emptyDelimiter = v;
+            this.plugin.settings.delimiterMode = v as DelimiterMode;
             await this.plugin.saveSettings();
             this.display();
           })
       );
 
-    if (!this.plugin.settings.emptyDelimiter) {
+    if (this.plugin.settings.delimiterMode !== "none") {
       new Setting(containerEl)
         .setName("Delimiter")
-        .setDesc('Separates the page number from the text. Example with "|": 42 | the author argues X')
+        .setDesc(
+          'Separates the page number from the text. Default: /  ' +
+            'Example: 42/the author argues X'
+        )
         .addText((t) =>
           t
             .setValue(this.plugin.settings.delimiter)
             .onChange(async (v) => {
-              this.plugin.settings.delimiter = v || "|";
+              this.plugin.settings.delimiter = v || "/";
               await this.plugin.saveSettings();
             })
         );
@@ -158,8 +175,8 @@ export class NoteCapSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Sticky page")
       .setDesc(
-        "When on, lines with no page number AND no delimiter reuse the last used page — " +
-          'just type "next point" and it nests under the current page.'
+        'When on, typing just the delimiter + text (e.g. "/note") reuses the last page. ' +
+          "Only available when delimiter mode is Required or Optional."
       )
       .addToggle((t) =>
         t

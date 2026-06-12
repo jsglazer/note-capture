@@ -8,14 +8,20 @@ import { buildBullet } from "./formatter";
 import { isNested } from "./nesting";
 import { SpellChecker } from "./spellcheck";
 
+/** True if the raw line is already a formatted Markdown bullet (- text or \t- text). */
+function isAlreadyBullet(raw: string): boolean {
+  const s = raw.trimStart();
+  return s.startsWith("- ") || s.startsWith("* ");
+}
+
 export default class NoteCapPlugin extends Plugin {
   settings: NoteCapSettings;
   private spell = new SpellChecker();
   private lastPage: string | null = null;
   private ribbonIconEl: HTMLElement | null = null;
   private intervalHandle: number | null = null;
-  /** Tracks the last line text seen in interval mode to avoid re-processing. */
-  private lastIntervalLine = "";
+  /** Last raw line text processed (or skipped) in interval mode. */
+  private lastIntervalLine = "\x00"; // sentinel so first real line is always checked
 
   async onload() {
     await this.loadSettings();
@@ -35,7 +41,7 @@ export default class NoteCapPlugin extends Plugin {
 
     // Ribbon icon — shows active/inactive state.
     this.ribbonIconEl = this.addRibbonIcon(
-      this.settings.captureEnabled ? "book-open" : "book",
+      "book-open",
       "Note Capture",
       () => this.toggleCapture()
     );
@@ -48,9 +54,9 @@ export default class NoteCapPlugin extends Plugin {
       callback: () => this.toggleCapture(),
     });
 
-    // Keypress mode: intercept Enter.
+    // Keypress mode: intercept Enter at highest priority.
     this.registerEditorExtension(
-      Prec.highest(keymap.of([{ key: "Enter", run: () => this.handleLine() }]))
+      Prec.highest(keymap.of([{ key: "Enter", run: () => this.handleEnter() }]))
     );
 
     this.restartInterval();
@@ -67,16 +73,12 @@ export default class NoteCapPlugin extends Plugin {
     if (!this.ribbonIconEl) return;
     const on = this.settings.captureEnabled;
     this.ribbonIconEl.setAttribute("aria-label", `Note Capture (${on ? "on" : "off"})`);
-    // Visually dim the icon when disabled.
     this.ribbonIconEl.style.opacity = on ? "1" : "0.4";
   }
 
   restartInterval() {
     this.clearInterval();
-    if (
-      this.settings.activationMode === "interval" &&
-      this.settings.captureEnabled
-    ) {
+    if (this.settings.activationMode === "interval" && this.settings.captureEnabled) {
       this.intervalHandle = window.setInterval(
         () => this.intervalTick(),
         this.settings.intervalMs
@@ -102,10 +104,9 @@ export default class NoteCapPlugin extends Plugin {
   }
 
   /**
-   * Interval mode: scan the active line. We commit a line only when it looks like
-   * a Note Capture entry AND the cursor has moved away from it (i.e. the line text
-   * hasn't changed since the last tick — the user has pressed Enter and moved on).
-   * This avoids partially-typed lines being transformed mid-entry.
+   * Interval mode: process the line ABOVE the cursor (the one the user just
+   * committed by pressing Enter). Only fires if that line changed since the last
+   * tick AND it is not already a formatted bullet.
    */
   private intervalTick() {
     if (!this.settings.captureEnabled) return;
@@ -113,18 +114,20 @@ export default class NoteCapPlugin extends Plugin {
     if (!view) return;
     const editor = view.editor;
     const cursor = editor.getCursor();
-    const lineNo = cursor.line;
-    // Only process the line ABOVE the cursor (the one just committed by Enter).
-    if (lineNo === 0) return;
-    const prevLineNo = lineNo - 1;
+    if (cursor.line === 0) return;
+
+    const prevLineNo = cursor.line - 1;
     const raw = editor.getLine(prevLineNo);
-    if (raw === this.lastIntervalLine) return; // already processed or unchanged
+
+    // Skip if unchanged since last tick (already processed, or user hasn't moved on).
+    if (raw === this.lastIntervalLine) return;
     this.lastIntervalLine = raw;
+
     this.transformLine(editor, prevLineNo, raw);
   }
 
   /** Called on Enter in keypress mode. Returns true to consume the event. */
-  private handleLine(): boolean {
+  private handleEnter(): boolean {
     if (!this.settings.captureEnabled) return false;
     if (this.settings.activationMode !== "keypress") return false;
 
@@ -132,10 +135,9 @@ export default class NoteCapPlugin extends Plugin {
     if (!view) return false;
     const editor = view.editor;
     const cursor = editor.getCursor();
-    const lineNo = cursor.line;
-    const raw = editor.getLine(lineNo);
+    const raw = editor.getLine(cursor.line);
 
-    return this.transformLine(editor, lineNo, raw);
+    return this.transformLine(editor, cursor.line, raw);
   }
 
   private transformLine(
@@ -143,8 +145,10 @@ export default class NoteCapPlugin extends Plugin {
     lineNo: number,
     raw: string
   ): boolean {
-    const delim = this.settings.emptyDelimiter ? "" : this.settings.delimiter;
-    const parsed = parseLine(raw, delim, this.settings.stickyPage);
+    // Safety guard: never re-process an already-formatted bullet.
+    if (isAlreadyBullet(raw)) return false;
+
+    const parsed = parseLine(raw, this.settings.delimiter, this.settings.delimiterMode);
     if (!parsed) return false;
 
     // Resolve page via sticky.
@@ -171,7 +175,7 @@ export default class NoteCapPlugin extends Plugin {
       }
     }
 
-    // Nesting: indent on the raw line signals sub-bullet.
+    // Nesting: an indented raw line becomes a sub-bullet.
     const nested = isNested(raw);
 
     const bullet = buildBullet(
@@ -189,6 +193,8 @@ export default class NoteCapPlugin extends Plugin {
     );
     editor.setCursor({ line: lineNo + 1, ch: 0 });
 
+    // Update interval guard to the new bullet so subsequent ticks skip it.
+    this.lastIntervalLine = bullet;
     this.lastPage = page;
 
     if (flags.length > 0) {
