@@ -1,11 +1,17 @@
 /**
- * Decide whether the line being committed should nest as a sub-bullet.
+ * Decide whether the committed line should become a sub-bullet.
  *
- * The line nests when the gap since the previous committed line is shorter than the
- * configured window — i.e. the follow-on text was entered quickly. The very first line
- * (lastEnterTime === 0) is always top-level.
+ * New algorithm (replaces timing-window):
+ * A line nests as a sub-bullet when the raw text typed by the user begins with at
+ * least one whitespace character (tab or space) BEFORE the Note Capture syntax.
+ * That is, the user presses Enter, then Tab (or Space), and then starts typing —
+ * the indent signals intent to nest.
+ *
+ * Example:
+ *   "\t42 | sub point"   -> nested  (user indented)
+ *   "42 | top level"     -> top-level
+ *   "\t| sticky sub"     -> nested
  */
-export function isNested(now: number, lastEnterTime: number, windowMs: number): boolean {
-  if (lastEnterTime <= 0) return false;
-  return now - lastEnterTime < windowMs;
+export function isNested(raw: string): boolean {
+  return raw.length > 0 && (raw[0] === "\t" || raw[0] === " ");
 }
