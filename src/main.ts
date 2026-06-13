@@ -93,7 +93,7 @@ function isAlreadyBullet(raw: string): boolean {
 }
 
 export default class NoteCapPlugin extends Plugin {
-	settings: NoteCapSettings;
+	settings!: NoteCapSettings;
 	private spell = new SpellChecker();
 	private lastPage: string | null = null;
 	private ribbonIconEl: HTMLElement | null = null;
