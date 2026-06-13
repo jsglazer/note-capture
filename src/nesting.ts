@@ -13,5 +13,5 @@
  *   "\t| sticky sub"     -> nested
  */
 export function isNested(raw: string): boolean {
-  return raw.length > 0 && (raw[0] === "\t" || raw[0] === " ");
+	return raw.length > 0 && (raw[0] === '\t' || raw[0] === ' ');
 }

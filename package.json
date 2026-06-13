@@ -1,27 +1,42 @@
 {
-  "name": "note-capture",
-  "version": "1.0.5",
-  "description": "Rapidly capture typed reading notes in Obsidian.",
-  "main": "main.js",
-  "scripts": {
-    "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
-  },
-  "keywords": [
-    "obsidian",
-    "notes",
-    "capture"
-  ],
-  "author": "jsglazer",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^20.11.0",
-    "builtin-modules": "^3.3.0",
-    "esbuild": "^0.20.0",
-    "obsidian": "^1.4.11",
-    "typescript": "^5.4.0"
-  },
-  "dependencies": {
-    "nspell": "^2.1.5"
-  }
+	"name": "note-capture",
+	"version": "1.0.5",
+	"description": "Rapidly capture typed reading notes in Obsidian.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"lint": "eslint src",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
+	},
+	"keywords": [
+		"obsidian",
+		"notes",
+		"capture"
+	],
+	"author": "jsglazer",
+	"license": "MIT",
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@eslint/json": "^2.0.0",
+		"@types/node": "^20.11.0",
+		"@vitest/coverage-v8": "^4.1.8",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "^0.20.0",
+		"eslint": "^10.5.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-obsidianmd": "^0.3.0",
+		"obsidian": "^1.4.11",
+		"prettier": "^3.8.4",
+		"typescript": "^5.4.0",
+		"typescript-eslint": "^8.61.0",
+		"vitest": "^4.1.8"
+	},
+	"dependencies": {
+		"nspell": "^2.1.5"
+	}
 }

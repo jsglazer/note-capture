@@ -1,10 +1,10 @@
-export type DelimiterMode = "required" | "optional" | "none";
+export type DelimiterMode = 'required' | 'optional' | 'none';
 
 export interface ParsedLine {
-  /** Page number as typed, or null when delimiter-sticky reuse applies. */
-  page: string | null;
-  /** The note text. */
-  text: string;
+	/** Page number as typed, or null when delimiter-sticky reuse applies. */
+	page: string | null;
+	/** The note text. */
+	text: string;
 }
 
 /** Matches Arabic digits or roman numerals (upper or lower case). */
@@ -17,18 +17,18 @@ const PAGE_RE = /^(\d+|[ivxlcdmIVXLCDM]+)$/;
  *   "/note"    -> { page: null,  text: "note" }  (delimiter-sticky)
  */
 function parseWithDelimiter(trimmed: string, delimiter: string): ParsedLine | null {
-  const idx = trimmed.indexOf(delimiter);
-  if (idx === -1) return null;
+	const idx = trimmed.indexOf(delimiter);
+	if (idx === -1) return null;
 
-  const left = trimmed.slice(0, idx).trim();
-  const text = trimmed.slice(idx + delimiter.length).trim();
-  if (text.length === 0) return null;
+	const left = trimmed.slice(0, idx).trim();
+	const text = trimmed.slice(idx + delimiter.length).trim();
+	if (text.length === 0) return null;
 
-  if (left.length === 0) return { page: null, text };
+	if (left.length === 0) return { page: null, text };
 
-  if (PAGE_RE.test(left)) return { page: left, text };
+	if (PAGE_RE.test(left)) return { page: left, text };
 
-  return null; // left side is not a valid page number
+	return null; // left side is not a valid page number
 }
 
 /**
@@ -38,11 +38,11 @@ function parseWithDelimiter(trimmed: string, delimiter: string): ParsedLine | nu
  *   "Note here"    -> null  (no leading page number)
  */
 function parseWithoutDelimiter(trimmed: string): ParsedLine | null {
-  const m = trimmed.match(/^(\d+|[ivxlcdmIVXLCDM]+)([\s\S]+)/);
-  if (!m) return null;
-  const text = m[2].trim();
-  if (text.length === 0) return null;
-  return { page: m[1], text };
+	const m = trimmed.match(/^(\d+|[ivxlcdmIVXLCDM]+)([\s\S]+)/);
+	if (!m) return null;
+	const text = m[2].trim();
+	if (text.length === 0) return null;
+	return { page: m[1], text };
 }
 
 /**
@@ -60,27 +60,27 @@ function parseWithoutDelimiter(trimmed: string): ParsedLine | null {
  * preventing accidental re-formatting of existing prose and bullets.
  */
 export function parseLine(
-  raw: string,
-  delimiter: string,
-  delimiterMode: DelimiterMode
+	raw: string,
+	delimiter: string,
+	delimiterMode: DelimiterMode,
 ): ParsedLine | null {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return null;
+	const trimmed = raw.trim();
+	if (trimmed.length === 0) return null;
 
-  switch (delimiterMode) {
-    case "required":
-      return parseWithDelimiter(trimmed, delimiter);
+	switch (delimiterMode) {
+		case 'required':
+			return parseWithDelimiter(trimmed, delimiter);
 
-    case "none":
-      return parseWithoutDelimiter(trimmed);
+		case 'none':
+			return parseWithoutDelimiter(trimmed);
 
-    case "optional": {
-      // Delimiter path takes priority when the delimiter is present.
-      if (trimmed.includes(delimiter)) {
-        const withDelim = parseWithDelimiter(trimmed, delimiter);
-        if (withDelim !== null) return withDelim;
-      }
-      return parseWithoutDelimiter(trimmed);
-    }
-  }
+		case 'optional': {
+			// Delimiter path takes priority when the delimiter is present.
+			if (trimmed.includes(delimiter)) {
+				const withDelim = parseWithDelimiter(trimmed, delimiter);
+				if (withDelim !== null) return withDelim;
+			}
+			return parseWithoutDelimiter(trimmed);
+		}
+	}
 }

@@ -1,6 +1,6 @@
 /** Substitute the page number (with optional prefix) into the user's page-reference template. */
-export function formatPage(template: string, page: string, pagePrefix = ""): string {
-  return template.split("${page}").join(pagePrefix + page);
+export function formatPage(template: string, page: string, pagePrefix = ''): string {
+	return template.split('${page}').join(pagePrefix + page);
 }
 
 /**
@@ -13,14 +13,14 @@ export function formatPage(template: string, page: string, pagePrefix = ""): str
  *     -> "- the author argues X (Smith, 42)"
  */
 export function buildBullet(
-  text: string,
-  page: string,
-  pageTemplate: string,
-  nested: boolean,
-  indent: string,
-  pagePrefix = ""
+	text: string,
+	page: string,
+	pageTemplate: string,
+	nested: boolean,
+	indent: string,
+	pagePrefix = '',
 ): string {
-  const ref = formatPage(pageTemplate, page, pagePrefix);
-  const linePrefix = nested ? indent : "";
-  return `${linePrefix}- ${text} ${ref}`;
+	const ref = formatPage(pageTemplate, page, pagePrefix);
+	const linePrefix = nested ? indent : '';
+	return `${linePrefix}- ${text} ${ref}`;
 }
