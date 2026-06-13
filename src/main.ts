@@ -1,5 +1,9 @@
 import { MarkdownView, Modal, Notice, Plugin, Setting, normalizePath } from 'obsidian';
+// @codemirror/* are provided by Obsidian at runtime and externalized by esbuild,
+// so they are intentionally not project dependencies.
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { keymap } from '@codemirror/view';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { Prec } from '@codemirror/state';
 
 import { DEFAULT_SETTINGS, NoteCapSettings, NoteCapSettingTab } from './settings';
@@ -28,7 +32,7 @@ class PrefixModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.createEl('h3', { text: 'Note Capture — Page prefix' });
+		contentEl.createEl('h3', { text: 'Note Capture — page prefix' });
 		contentEl.createEl('p', {
 			text: 'Text inserted before the page number. Example: "Smith, " → (Smith, 123). Leave blank for none.',
 			cls: 'setting-item-description',
@@ -43,7 +47,7 @@ class PrefixModal extends Modal {
 					this.value = v;
 				});
 			inputEl = t.inputEl;
-			inputEl.style.width = '100%';
+			inputEl.addClass('note-capture-prefix-input');
 		});
 
 		new Setting(contentEl)
@@ -106,14 +110,14 @@ export default class NoteCapPlugin extends Plugin {
 		// Load Hunspell dictionary if available.
 		const dir = this.manifest.dir;
 		if (dir) {
-			const loaded = await this.spell.init(async (rel) => {
+			// Dictionary load is best-effort; spellcheck silently no-ops if absent.
+			await this.spell.init(async (rel) => {
 				const p = normalizePath(`${dir}/${rel}`);
 				if (await this.app.vault.adapter.exists(p)) {
 					return this.app.vault.adapter.read(p);
 				}
 				return null;
 			});
-			if (loaded) console.log('Note Capture: loaded en_US Hunspell dictionary.');
 		}
 
 		// Ribbon icon — shows active/inactive state.
@@ -179,7 +183,7 @@ export default class NoteCapPlugin extends Plugin {
 		if (this.settings.captureEnabled) {
 			// Turning OFF.
 			this.settings.captureEnabled = false;
-			this.saveSettings();
+			void this.saveSettings();
 			this.updateRibbonIcon();
 			this.stopInterval();
 			new Notice('Note Capture disabled');
@@ -188,13 +192,15 @@ export default class NoteCapPlugin extends Plugin {
 			new PrefixModal(
 				this.app,
 				this.settings.pagePrefix,
-				async (prefix) => {
-					this.settings.pagePrefix = prefix;
-					this.settings.captureEnabled = true;
-					await this.saveSettings();
-					this.updateRibbonIcon();
-					this.restartInterval();
-					new Notice('Note Capture enabled');
+				(prefix) => {
+					void (async () => {
+						this.settings.pagePrefix = prefix;
+						this.settings.captureEnabled = true;
+						await this.saveSettings();
+						this.updateRibbonIcon();
+						this.restartInterval();
+						new Notice('Note Capture enabled');
+					})();
 				},
 				() => {
 					// User cancelled — leave capture off.
@@ -313,7 +319,8 @@ export default class NoteCapPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const stored = (await this.loadData()) as Partial<NoteCapSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
 	}
 
 	async saveSettings() {

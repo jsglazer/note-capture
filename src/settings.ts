@@ -110,6 +110,9 @@ export class NoteCapSettingTab extends PluginSettingTab {
 						this.plugin.settings.activationMode = v as ActivationMode;
 						await this.plugin.saveSettings();
 						this.plugin.restartInterval();
+						// Re-render to show/hide the interval field. display() is the
+						// established re-render idiom for settings tabs.
+						// eslint-disable-next-line @typescript-eslint/no-deprecated
 						this.display();
 					}),
 			);
@@ -149,6 +152,9 @@ export class NoteCapSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.delimiterMode = v as DelimiterMode;
 						await this.plugin.saveSettings();
+						// Re-render to show/hide the delimiter field. display() is the
+						// established re-render idiom for settings tabs.
+						// eslint-disable-next-line @typescript-eslint/no-deprecated
 						this.display();
 					}),
 			);

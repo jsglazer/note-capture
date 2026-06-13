@@ -24,12 +24,8 @@ jobs:
 
       - run: npm ci
 
-      # Non-blocking pending cleanup of ~17 eslint findings (sentence-case UI
-      # text, no-floating-promises, no-console). Tracked as a follow-up; CodeQL
-      # provides the security gate. TODO: clear these and make this blocking.
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Format check
         run: npm run format:check

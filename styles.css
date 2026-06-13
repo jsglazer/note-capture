@@ -1,0 +1,4 @@
+/* Prefix input in the "turn capture on" prompt should fill the modal width. */
+.note-capture-prefix-input {
+	width: 100%;
+}
