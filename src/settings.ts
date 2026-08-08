@@ -76,11 +76,6 @@ export interface NoteCapSettings {
 	toolbarHighlightToolbarUuid: string;
 	toolbarHighlightItemUuid: string;
 	toolbarHighlightFormat: ToolbarHighlightFormat;
-
-	// ---- Reserved for v1.1+ (optional on-demand Claude API grammar/fact-check) ----
-	llmEnabled: boolean;
-	llmApiKey: string;
-	llmModel: string;
 }
 
 export const DEFAULT_SETTINGS: NoteCapSettings = {
@@ -109,9 +104,6 @@ export const DEFAULT_SETTINGS: NoteCapSettings = {
 			bg: colorOption(true, '#2e5d33'),
 		},
 	},
-	llmEnabled: false,
-	llmApiKey: '',
-	llmModel: 'claude-haiku-4-5-20251001',
 };
 
 export class NoteCapSettingTab extends PluginSettingTab {
