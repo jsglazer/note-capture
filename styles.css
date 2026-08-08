@@ -9,3 +9,11 @@
 .note-capture-prefix-input {
 	width: 100%;
 }
+
+/* Applied to a Note Toolbar item while capture is active; colors are set inline
+ * from settings (see src/toolbarHighlight.ts) since they are user-configurable. */
+.note-capture-toolbar-highlight {
+	transition:
+		background-color 120ms ease,
+		color 120ms ease;
+}

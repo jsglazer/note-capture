@@ -30,11 +30,12 @@ export default tseslint.config(
 			'obsidianmd/ui/sentence-case': [
 				'error',
 				{
-					brands: ['Note Capture'],
+					brands: ['Note Capture', 'Note Toolbar'],
 					ignoreRegex: [
 						'^Text inserted before the page number',
 						'^e\\.g\\. Smith,',
 						'^Keypress \\(Enter\\)$',
+						'^— None',
 					],
 				},
 			],

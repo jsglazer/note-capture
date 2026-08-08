@@ -1,10 +1,37 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type NoteCapPlugin from './main';
 import type { DelimiterMode } from './parser';
+import {
+	isNoteToolbarAvailable,
+	itemDisplayName,
+	listHighlightableItems,
+	listToolbars,
+} from './toolbarHighlight';
 
 export type { DelimiterMode };
 export type CorrectionMode = 'autocorrect' | 'flag';
 export type ActivationMode = 'keypress' | 'interval';
+
+/** One color override plus whether it's actually applied (an unchecked color is ignored). */
+export interface ColorOption {
+	enabled: boolean;
+	color: string;
+}
+
+/** Foreground (text) + background color pair for one theme (light or dark). */
+export interface ToolbarHighlightThemeColors {
+	fg: ColorOption;
+	bg: ColorOption;
+}
+
+export interface ToolbarHighlightFormat {
+	light: ToolbarHighlightThemeColors;
+	dark: ToolbarHighlightThemeColors;
+}
+
+function colorOption(enabled: boolean, color: string): ColorOption {
+	return { enabled, color };
+}
 
 export interface NoteCapSettings {
 	/** Whether the plugin is actively transforming lines. */
@@ -42,6 +69,14 @@ export interface NoteCapSettings {
 	 */
 	stickyLastPage: string | null;
 
+	/**
+	 * Note Toolbar (https://github.com/chrisgurney/obsidian-note-toolbar) integration:
+	 * highlight one toolbar item while capture is active. Empty uuid = not configured.
+	 */
+	toolbarHighlightToolbarUuid: string;
+	toolbarHighlightItemUuid: string;
+	toolbarHighlightFormat: ToolbarHighlightFormat;
+
 	// ---- Reserved for v1.1+ (optional on-demand Claude API grammar/fact-check) ----
 	llmEnabled: boolean;
 	llmApiKey: string;
@@ -62,6 +97,18 @@ export const DEFAULT_SETTINGS: NoteCapSettings = {
 	pagePrefix: '',
 	debugLogging: false,
 	stickyLastPage: null,
+	toolbarHighlightToolbarUuid: '',
+	toolbarHighlightItemUuid: '',
+	toolbarHighlightFormat: {
+		light: {
+			fg: colorOption(false, ''),
+			bg: colorOption(true, '#c8e6c9'),
+		},
+		dark: {
+			fg: colorOption(false, ''),
+			bg: colorOption(true, '#2e5d33'),
+		},
+	},
 	llmEnabled: false,
 	llmApiKey: '',
 	llmModel: 'claude-haiku-4-5-20251001',
@@ -278,6 +325,9 @@ export class NoteCapSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		// ---- Note Toolbar highlight -----------------------------------------------
+		this.displayToolbarHighlightSection(containerEl);
+
 		// ---- Diagnostics ---------------------------------------------------------
 		new Setting(containerEl).setName('Diagnostics').setHeading();
 
@@ -308,6 +358,126 @@ export class NoteCapSettingTab extends PluginSettingTab {
 					// display() is the established re-render idiom for settings tabs.
 					// eslint-disable-next-line @typescript-eslint/no-deprecated
 					this.display();
+				}),
+			);
+	}
+
+	/**
+	 * Highlights one Note Toolbar (https://github.com/chrisgurney/obsidian-note-toolbar) item
+	 * while capture is active. Reads that plugin's toolbars directly — there is no public API
+	 * for this — so the dropdowns simply disappear if it is not installed or enabled.
+	 */
+	private displayToolbarHighlightSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName('Note Toolbar highlight').setHeading();
+
+		if (!isNoteToolbarAvailable(this.app)) {
+			containerEl.createEl('p', {
+				text:
+					'Install and enable the Note Toolbar plugin to highlight one of its items ' +
+					'while capture is active.',
+				cls: 'setting-item-description',
+			});
+			return;
+		}
+
+		const toolbars = listToolbars(this.app);
+		const toolbarUuid = this.plugin.settings.toolbarHighlightToolbarUuid;
+
+		new Setting(containerEl)
+			.setName('Toolbar')
+			.setDesc('Toolbar containing the item to highlight while capture is active.')
+			.addDropdown((d) => {
+				d.addOption('', '— None (disabled) —');
+				for (const t of toolbars) d.addOption(t.uuid, t.name);
+				d.setValue(toolbarUuid).onChange(async (v) => {
+					this.plugin.settings.toolbarHighlightToolbarUuid = v;
+					this.plugin.settings.toolbarHighlightItemUuid = '';
+					await this.plugin.saveSettings();
+					this.plugin.refreshToolbarHighlight();
+					// Re-render so the Item dropdown reflects the newly chosen toolbar.
+					// eslint-disable-next-line @typescript-eslint/no-deprecated
+					this.display();
+				});
+			});
+
+		if (toolbarUuid) {
+			const items = listHighlightableItems(this.app, toolbarUuid);
+			new Setting(containerEl)
+				.setName('Item')
+				.setDesc('Item within that toolbar to highlight.')
+				.addDropdown((d) => {
+					d.addOption('', '— None —');
+					for (const i of items) d.addOption(i.uuid, itemDisplayName(i));
+					d.setValue(this.plugin.settings.toolbarHighlightItemUuid).onChange(async (v) => {
+						this.plugin.settings.toolbarHighlightItemUuid = v;
+						await this.plugin.saveSettings();
+						this.plugin.refreshToolbarHighlight();
+					});
+				});
+
+			if (items.length === 0) {
+				containerEl.createEl('p', {
+					text: 'That toolbar has no items that can be highlighted.',
+					cls: 'setting-item-description',
+				});
+			}
+		}
+
+		containerEl.createEl('p', {
+			text:
+				'Colors applied to the highlighted item while capture is active ' +
+				'(installed, enabled, and turned on). Light and dark match the current Obsidian theme.',
+			cls: 'setting-item-description',
+		});
+
+		this.renderColorRow(
+			containerEl,
+			'Light theme — background',
+			this.plugin.settings.toolbarHighlightFormat.light.bg,
+			(next) => (this.plugin.settings.toolbarHighlightFormat.light.bg = next),
+		);
+		this.renderColorRow(
+			containerEl,
+			'Light theme — text',
+			this.plugin.settings.toolbarHighlightFormat.light.fg,
+			(next) => (this.plugin.settings.toolbarHighlightFormat.light.fg = next),
+		);
+		this.renderColorRow(
+			containerEl,
+			'Dark theme — background',
+			this.plugin.settings.toolbarHighlightFormat.dark.bg,
+			(next) => (this.plugin.settings.toolbarHighlightFormat.dark.bg = next),
+		);
+		this.renderColorRow(
+			containerEl,
+			'Dark theme — text',
+			this.plugin.settings.toolbarHighlightFormat.dark.fg,
+			(next) => (this.plugin.settings.toolbarHighlightFormat.dark.fg = next),
+		);
+	}
+
+	/** One "enable + color" row shared by the four light/dark, background/text combinations. */
+	private renderColorRow(
+		containerEl: HTMLElement,
+		name: string,
+		option: ColorOption,
+		apply: (next: ColorOption) => void,
+	): void {
+		new Setting(containerEl)
+			.setName(name)
+			.setDesc('Off leaves this to Note Toolbar/theme defaults.')
+			.addToggle((t) =>
+				t.setValue(option.enabled).onChange(async (v) => {
+					apply({ ...option, enabled: v });
+					await this.plugin.saveSettings();
+					this.plugin.refreshToolbarHighlight();
+				}),
+			)
+			.addColorPicker((c) =>
+				c.setValue(option.color || '#000000').onChange(async (v) => {
+					apply({ ...option, color: v });
+					await this.plugin.saveSettings();
+					this.plugin.refreshToolbarHighlight();
 				}),
 			);
 	}

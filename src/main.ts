@@ -11,6 +11,7 @@ import { parseLine, splitBulletPrefix, isAlreadyFormatted } from './parser';
 import { buildBullet, formatPage } from './formatter';
 import { isNested } from './nesting';
 import { SpellChecker } from './spellcheck';
+import { ToolbarHighlighter } from './toolbarHighlight';
 
 /** Modal prompting for the page prefix each time capture is turned on. */
 class PrefixModal extends Modal {
@@ -92,6 +93,7 @@ export default class NoteCapPlugin extends Plugin {
 	private lastPage: string | null = null;
 	private ribbonIconEl: HTMLElement | null = null;
 	private intervalHandle: number | null = null;
+	private toolbarHighlighter: ToolbarHighlighter | undefined;
 
 	// Interval-mode: track cursor + line across ticks to detect "user paused".
 	private prevTickLine = -1;
@@ -163,6 +165,22 @@ export default class NoteCapPlugin extends Plugin {
 		this.restartInterval();
 		this.addSettingTab(new NoteCapSettingTab(this.app, this));
 
+		// Note Toolbar item highlight: re-applied whenever the active view (re)renders a
+		// toolbar, since Note Toolbar recreates its DOM per leaf/file/mode. A short delay
+		// lets Note Toolbar's own render finish first — plugin event-handler order across
+		// two separate plugins is not guaranteed.
+		this.toolbarHighlighter = new ToolbarHighlighter(this.app, () => this.settings);
+		const scheduleToolbarHighlightRefresh = () => {
+			window.setTimeout(() => this.refreshToolbarHighlight(), 50);
+		};
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', scheduleToolbarHighlightRefresh),
+		);
+		this.registerEvent(this.app.workspace.on('layout-change', scheduleToolbarHighlightRefresh));
+		this.registerEvent(this.app.workspace.on('file-open', scheduleToolbarHighlightRefresh));
+		this.registerEvent(this.app.workspace.on('css-change', scheduleToolbarHighlightRefresh));
+		this.app.workspace.onLayoutReady(scheduleToolbarHighlightRefresh);
+
 		this.debug(`loaded v${this.manifest.version}`, this.statusLine());
 	}
 
@@ -179,6 +197,7 @@ export default class NoteCapPlugin extends Plugin {
 
 	onunload() {
 		this.stopInterval();
+		this.toolbarHighlighter?.clear();
 	}
 
 	/**
@@ -199,6 +218,12 @@ export default class NoteCapPlugin extends Plugin {
 		const on = this.settings.captureEnabled;
 		this.ribbonIconEl.setAttribute('aria-label', `Note Capture (${on ? 'on' : 'off'})`);
 		this.ribbonIconEl.style.opacity = on ? '1' : '0.4';
+		this.refreshToolbarHighlight();
+	}
+
+	/** Re-applies the configured Note Toolbar item highlight for the current capture state. */
+	refreshToolbarHighlight() {
+		this.toolbarHighlighter?.refresh(this.settings.captureEnabled);
 	}
 
 	restartInterval() {
