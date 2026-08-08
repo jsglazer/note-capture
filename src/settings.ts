@@ -34,6 +34,13 @@ export interface NoteCapSettings {
 	subBulletIndent: string;
 	/** Text prepended before the page number in the reference. e.g. "Smith, " → (Smith, 42). */
 	pagePrefix: string;
+	/** Log capture decisions to the developer console (Ctrl/Cmd-Shift-I). */
+	debugLogging: boolean;
+	/**
+	 * Last page seen, persisted so "sticky" (e.g. "/note") survives a reload.
+	 * Internal state, not exposed in the settings UI.
+	 */
+	stickyLastPage: string | null;
 
 	// ---- Reserved for v1.1+ (optional on-demand Claude API grammar/fact-check) ----
 	llmEnabled: boolean;
@@ -53,6 +60,8 @@ export const DEFAULT_SETTINGS: NoteCapSettings = {
 	spellcheckEnabled: true,
 	subBulletIndent: '\t',
 	pagePrefix: '',
+	debugLogging: false,
+	stickyLastPage: null,
 	llmEnabled: false,
 	llmApiKey: '',
 	llmModel: 'claude-haiku-4-5-20251001',
@@ -69,6 +78,14 @@ export class NoteCapSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+
+		// Source / issues link.
+		const linkRow = containerEl.createEl('p', { cls: 'note-capture-repo-link' });
+		linkRow.createEl('a', {
+			text: 'GitHub repository',
+			href: 'https://github.com/jsglazer/note-capture',
+		});
+		linkRow.appendText(` — v${this.plugin.manifest.version}`);
 
 		containerEl.createEl('p', {
 			text:
@@ -99,7 +116,9 @@ export class NoteCapSettingTab extends PluginSettingTab {
 			.setName('Activation mode')
 			.setDesc(
 				'"Keypress" transforms a line when you press Enter. ' +
-					'"Interval" scans the line above the cursor on a timer.',
+					'"Interval" transforms a line you have typed on once you pause, ' +
+					'or as soon as you move off it (including by pressing Enter). ' +
+					'Lines you have not typed on are never touched.',
 			)
 			.addDropdown((d) =>
 				d
@@ -257,6 +276,39 @@ export class NoteCapSettingTab extends PluginSettingTab {
 						this.plugin.settings.correctionMode = v as CorrectionMode;
 						await this.plugin.saveSettings();
 					}),
+			);
+
+		// ---- Diagnostics ---------------------------------------------------------
+		new Setting(containerEl).setName('Diagnostics').setHeading();
+
+		new Setting(containerEl)
+			.setName('Debug logging')
+			.setDesc(
+				'Log every capture decision to the developer console ' +
+					'(Cmd/Ctrl-Shift-I). Use this to see why a line was or was not transformed.',
+			)
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.debugLogging).onChange(async (v) => {
+					this.plugin.settings.debugLogging = v;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Sticky page')
+			.setDesc(
+				this.plugin.settings.stickyLastPage === null
+					? 'No page remembered yet — type a line with a page number first.'
+					: `Remembered page: ${this.plugin.settings.stickyLastPage}`,
+			)
+			.addButton((b) =>
+				b.setButtonText('Clear').onClick(async () => {
+					this.plugin.settings.stickyLastPage = null;
+					await this.plugin.saveSettings();
+					// display() is the established re-render idiom for settings tabs.
+					// eslint-disable-next-line @typescript-eslint/no-deprecated
+					this.display();
+				}),
 			);
 	}
 }

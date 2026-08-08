@@ -5,7 +5,7 @@ Created: 2026-06-12
 Repository: https://github.com/jsglazer/note-capture
 Formerly: NoteCap (renamed 2026-06-12)
 
-No `UpdateXX.md` file existed for this project, so per the Dev workflow rules all activity is
+No `UpdateNN.md` file existed for this project, so per the Dev workflow rules all activity is
 logged here.
 
 ---

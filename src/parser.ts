@@ -7,8 +7,20 @@ export interface ParsedLine {
 	text: string;
 }
 
-/** Matches Arabic digits or roman numerals (upper or lower case). */
-const PAGE_RE = /^(\d+|[ivxlcdmIVXLCDM]+)$/;
+/**
+ * A *well-formed* roman numeral (i, iv, xiv, mcmxciv …), case-insensitive.
+ *
+ * A naive `[ivxlcdm]+` also matches ordinary words built from those seven letters —
+ * "mix", "did", "lid", "civil" — which made prose parse as a page number and made
+ * `isAlreadyFormatted` skip lines ending in e.g. "(civil)".
+ */
+const ROMAN_SRC = '(?=[ivxlcdm])m*(?:c[md]|d?c{0,3})(?:x[cl]|l?x{0,3})(?:i[xv]|v?i{0,3})';
+
+/** Source for "a page number": Arabic digits or a well-formed roman numeral. */
+export const PAGE_PATTERN_SRC = `(?:\\d+|${ROMAN_SRC})`;
+
+/** Matches a complete page number (Arabic digits or roman numerals, either case). */
+const PAGE_RE = new RegExp(`^${PAGE_PATTERN_SRC}$`, 'i');
 
 /**
  * Try to parse a line that MUST contain the delimiter.
@@ -38,7 +50,7 @@ function parseWithDelimiter(trimmed: string, delimiter: string): ParsedLine | nu
  *   "Note here"    -> null  (no leading page number)
  */
 function parseWithoutDelimiter(trimmed: string): ParsedLine | null {
-	const m = trimmed.match(/^(\d+|[ivxlcdmIVXLCDM]+)([\s\S]+)/);
+	const m = trimmed.match(new RegExp(`^(${PAGE_PATTERN_SRC})([\\s\\S]+)`, 'i'));
 	if (!m) return null;
 	const text = m[2].trim();
 	if (text.length === 0) return null;
@@ -83,4 +95,44 @@ export function parseLine(
 			return parseWithoutDelimiter(trimmed);
 		}
 	}
+}
+
+export interface SplitLine {
+	indent: string;
+	bulletPrefix: string;
+	content: string;
+}
+
+export function splitBulletPrefix(raw: string): SplitLine {
+	const m = raw.match(/^(\s*)([-*+](?:\s+\[.?\])?\s+)(.*)$/);
+	if (m) {
+		return {
+			indent: m[1],
+			bulletPrefix: m[2],
+			content: m[3],
+		};
+	}
+	return {
+		indent: '',
+		bulletPrefix: '',
+		content: raw,
+	};
+}
+
+export function isAlreadyFormatted(raw: string, template: string): boolean {
+	const trimmed = raw.trimEnd();
+	if (trimmed.length === 0) return false;
+
+	// First, replace the placeholder ${page} with a unique token that contains no regex special characters
+	const token = '___PAGE_PLACEHOLDER_TOKEN___';
+	const tokenized = template.replace(/\$\{page\}/g, token);
+
+	// Escape all regex special characters in the tokenized template
+	const escaped = tokenized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+	// Replace the token with the page pattern
+	const pattern = escaped.replace(new RegExp(token, 'g'), PAGE_PATTERN_SRC);
+
+	const regex = new RegExp(pattern + '$', 'i');
+	return regex.test(trimmed);
 }

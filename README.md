@@ -16,7 +16,7 @@ Works on **macOS and iOS** (single plugin, `isDesktopOnly: false`).
 Type directly in any note:
 
 ```
-42 | the author argues X
+42 / the author argues X
 ```
 
 Press Enter and it becomes:
