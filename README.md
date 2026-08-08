@@ -31,6 +31,7 @@ Press Enter and it becomes:
 - **Sub-bullets** — indent the line (using Tab or Space) before typing to make the next note nest as a sub-bullet.
 - **Page prefix** — set a prefix (prompted each time you turn capture on, or in settings) to get `- the author argues X (Smith, 42)`.
 - **Spell check** — each committed line is checked locally. Choose **auto-correct** (fixes inline) or **flag** (shows a notice) in settings.
+- **Note Toolbar highlight** — optionally highlight an item in a [Note Toolbar](https://github.com/chrisgurney/obsidian-note-toolbar) toolbar (e.g. a "Note" button) with a custom color whenever capture is installed, enabled, and turned on — a quick visual reminder that capture is live.
 
 ### Activation modes
 
@@ -56,6 +57,7 @@ Interval mode only ever acts on lines you have typed on in the current session, 
 | Spell check           | on          | Local, offline                                           |
 | Correction mode       | flag        | `auto-correct` or `flag`                                 |
 | Debug logging         | off         | Traces every capture decision to the developer console   |
+| Note Toolbar highlight | off        | Pick a toolbar + item, and light/dark colors to apply while capture is active. Requires the Note Toolbar plugin |
 
 ## Troubleshooting
 
