@@ -44,20 +44,20 @@ Interval mode only ever acts on lines you have typed on in the current session, 
 
 ## Settings
 
-| Setting               | Default     | Notes                                                    |
-| --------------------- | ----------- | -------------------------------------------------------- |
-| Activation mode       | keypress    | `keypress` or `interval`                                 |
-| Interval              | 2000 ms     | Interval mode only; minimum 200 ms                       |
-| Delimiter mode        | required    | `required` (`84/note`), `optional`, or `none` (`84note`) |
-| Delimiter             | `/`         | Separates page from text                                 |
-| Sticky page           | on          | Reuse last page when omitted                             |
-| Page reference format | `(${page})` | `${page}` placeholder                                    |
-| Sub-bullet indent     | tab         | `tab` or literal spaces                                  |
-| Page prefix           | none        | e.g. `Smith, ` → `(Smith, 42)`                           |
-| Spell check           | on          | Local, offline                                           |
-| Correction mode       | flag        | `auto-correct` or `flag`                                 |
-| Debug logging         | off         | Traces every capture decision to the developer console   |
-| Note Toolbar highlight | off        | Pick a toolbar + item, and light/dark colors to apply while capture is active. Requires the Note Toolbar plugin |
+| Setting                | Default     | Notes                                                                                                           |
+| ---------------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Activation mode        | keypress    | `keypress` or `interval`                                                                                        |
+| Interval               | 2000 ms     | Interval mode only; minimum 200 ms                                                                              |
+| Delimiter mode         | required    | `required` (`84/note`), `optional`, or `none` (`84note`)                                                        |
+| Delimiter              | `/`         | Separates page from text                                                                                        |
+| Sticky page            | on          | Reuse last page when omitted                                                                                    |
+| Page reference format  | `(${page})` | `${page}` placeholder                                                                                           |
+| Sub-bullet indent      | tab         | `tab` or literal spaces                                                                                         |
+| Page prefix            | none        | e.g. `Smith, ` → `(Smith, 42)`                                                                                  |
+| Spell check            | on          | Local, offline                                                                                                  |
+| Correction mode        | flag        | `auto-correct` or `flag`                                                                                        |
+| Debug logging          | off         | Traces every capture decision to the developer console                                                          |
+| Note Toolbar highlight | off         | Pick a toolbar + item, and light/dark colors to apply while capture is active. Requires the Note Toolbar plugin |
 
 ## Troubleshooting
 

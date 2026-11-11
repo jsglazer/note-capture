@@ -132,14 +132,14 @@ Inspected the installed Note Toolbar plugin (v1.34.13, `main.js`) and the user's
 
 ### Issue / Fix summary
 
-| # | Issue | Fix |
-|---|---|---|
-| 1 | No way to color a Note Toolbar item based on capture state; Note Toolbar has no public styling API | `src/toolbarHighlight.ts` reads Note Toolbar's settings directly and targets the live element via container `id` (toolbar uuid) + `data-index` (item's array index) |
-| 2 | Settings needed a way to pick which toolbar/item to highlight without hardcoding uuids | Toolbar/Item dropdowns in settings, populated live from Note Toolbar's own settings, re-rendered on toolbar change |
-| 3 | Colors are user-configurable, so they cannot live in static CSS | Applied as inline styles from `toolbarHighlightFormat` (light/dark × bg/fg), set/cleared by `ToolbarHighlighter` |
-| 4 | Highlight needed to survive note switches, pane switches, and theme changes | Refreshed on `active-leaf-change`, `layout-change`, `file-open`, `css-change`, plus every capture toggle |
-| 5 | Two new UI strings failed the `obsidianmd/ui/sentence-case` lint rule | Added "Note Toolbar" as a recognized brand and an ignore-regex for "— None —" placeholders |
-| 6 | `toolbars.forEach((t) => d.addOption(...))` tripped `no-misused-promises` (dropdown builder's chainable return read as a discarded promise) | Switched to a plain `for...of` loop |
+| #   | Issue                                                                                                                                       | Fix                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | No way to color a Note Toolbar item based on capture state; Note Toolbar has no public styling API                                          | `src/toolbarHighlight.ts` reads Note Toolbar's settings directly and targets the live element via container `id` (toolbar uuid) + `data-index` (item's array index) |
+| 2   | Settings needed a way to pick which toolbar/item to highlight without hardcoding uuids                                                      | Toolbar/Item dropdowns in settings, populated live from Note Toolbar's own settings, re-rendered on toolbar change                                                  |
+| 3   | Colors are user-configurable, so they cannot live in static CSS                                                                             | Applied as inline styles from `toolbarHighlightFormat` (light/dark × bg/fg), set/cleared by `ToolbarHighlighter`                                                    |
+| 4   | Highlight needed to survive note switches, pane switches, and theme changes                                                                 | Refreshed on `active-leaf-change`, `layout-change`, `file-open`, `css-change`, plus every capture toggle                                                            |
+| 5   | Two new UI strings failed the `obsidianmd/ui/sentence-case` lint rule                                                                       | Added "Note Toolbar" as a recognized brand and an ignore-regex for "— None —" placeholders                                                                          |
+| 6   | `toolbars.forEach((t) => d.addOption(...))` tripped `no-misused-promises` (dropdown builder's chainable return read as a discarded promise) | Switched to a plain `for...of` loop                                                                                                                                 |
 
 ### Session summary (as presented)
 

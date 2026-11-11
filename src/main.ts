@@ -1,9 +1,9 @@
 import { MarkdownView, Modal, Notice, Plugin, Setting, normalizePath } from 'obsidian';
 // @codemirror/* are provided by Obsidian at runtime and externalized by esbuild,
 // so they are intentionally not project dependencies.
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies -- provided by Obsidian at runtime, not bundled
 import { keymap } from '@codemirror/view';
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies -- provided by Obsidian at runtime, not bundled
 import { Prec } from '@codemirror/state';
 
 import { DEFAULT_SETTINGS, NoteCapSettings, NoteCapSettingTab } from './settings';
@@ -207,8 +207,7 @@ export default class NoteCapPlugin extends Plugin {
 	 */
 	private debug(...args: unknown[]) {
 		if (!this.settings.debugLogging) return;
-		// eslint-disable-next-line obsidianmd/rule-custom-message
-		console.log('Note Capture:', ...args);
+		console.debug('Note Capture:', ...args);
 	}
 
 	// ---- Public helpers called from settings tab --------------------------------

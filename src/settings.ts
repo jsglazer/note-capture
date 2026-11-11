@@ -170,7 +170,6 @@ export class NoteCapSettingTab extends PluginSettingTab {
 						this.plugin.restartInterval();
 						// Re-render to show/hide the interval field. display() is the
 						// established re-render idiom for settings tabs.
-						// eslint-disable-next-line @typescript-eslint/no-deprecated
 						this.display();
 					}),
 			);
@@ -212,7 +211,6 @@ export class NoteCapSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						// Re-render to show/hide the delimiter field. display() is the
 						// established re-render idiom for settings tabs.
-						// eslint-disable-next-line @typescript-eslint/no-deprecated
 						this.display();
 					}),
 			);
@@ -348,7 +346,6 @@ export class NoteCapSettingTab extends PluginSettingTab {
 					this.plugin.settings.stickyLastPage = null;
 					await this.plugin.saveSettings();
 					// display() is the established re-render idiom for settings tabs.
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
 					this.display();
 				}),
 			);
@@ -387,7 +384,6 @@ export class NoteCapSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					this.plugin.refreshToolbarHighlight();
 					// Re-render so the Item dropdown reflects the newly chosen toolbar.
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
 					this.display();
 				});
 			});
